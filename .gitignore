@@ -9,4 +9,8 @@ wheels/
 # Virtual environments
 .venv
 .facena.
+.medicina/*
+.medicina
+.postgres_data/*
 .env
+*.md

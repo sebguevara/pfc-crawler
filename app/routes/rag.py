@@ -1,14 +1,22 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from app.services.rag import retrieval_app
+from fastapi.responses import StreamingResponse
+from app.services.rag import RAGService
+from app.core.dependencies import get_rag_service
 
-router = APIRouter(prefix="/rag", tags=["rag"])
+router = APIRouter(prefix="/rag", tags=["RAG"])
 
-class KBQuery(BaseModel):
+class QueryRequest(BaseModel):
     query: str
-    k: int | None = 5
 
-@router.post("/kb")
-def kb_search_route(payload: KBQuery):
-    state = retrieval_app.invoke({"question": payload.query, "k": payload.k or 5})
-    return {"results": state["results"]}
+async def stream_generator(response_stream):
+    for token in response_stream.response_gen:
+        yield token
+
+@router.post("/chat")
+async def chat_with_rag(
+    request: QueryRequest,
+    rag_service: RAGService = Depends(get_rag_service)
+):
+    response_stream = rag_service.ask(request.query)
+    return StreamingResponse(stream_generator(response_stream), media_type="text/plain")
