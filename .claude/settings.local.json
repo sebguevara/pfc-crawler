@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(uv run python:*)",
+      "Bash(grep:*)",
+      "Bash(docker exec:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)"
+    ]
+  }
+}

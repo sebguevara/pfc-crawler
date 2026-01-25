@@ -14,8 +14,29 @@ class LinkExtractor(HTMLParser):
                 if k.lower()=="href" and v: self.links.append(v)
 
 def same_site(url: str, base_host: str) -> bool:
-    host = urlparse(url).hostname or ""
-    return host.lower().lstrip("www.").endswith(base_host)
+    """
+    Valida que la URL pertenezca EXACTAMENTE al dominio base (sin subdominios).
+
+    Ejemplos:
+    - same_site("https://med.unne.edu.ar/page1", "med.unne.edu.ar") -> True
+    - same_site("http://med.unne.edu.ar/page1", "med.unne.edu.ar") -> True
+    - same_site("https://www.med.unne.edu.ar/page1", "med.unne.edu.ar") -> False (subdominio)
+    - same_site("https://blog.med.unne.edu.ar/page1", "med.unne.edu.ar") -> False (subdominio)
+    """
+    parsed = urlparse(url)
+    host = (parsed.hostname or "").lower()
+
+    # Normalizar: remover www. del host extraído
+    if host.startswith("www."):
+        host = host[4:]
+
+    # Normalizar: remover www. del base_host
+    normalized_base = base_host.lower()
+    if normalized_base.startswith("www."):
+        normalized_base = normalized_base[4:]
+
+    # Comparación EXACTA (no .endswith())
+    return host == normalized_base
 
 def is_html_like(u: str) -> bool:
     path = urlparse(u).path.lower()

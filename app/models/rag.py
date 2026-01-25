@@ -1,76 +1,67 @@
-from uuid import uuid4, UUID
+from typing import Optional, List, Dict, Any
+from uuid import UUID, uuid4
 from datetime import datetime
-from sqlalchemy import DateTime, func
-from sqlmodel import SQLModel, Field, Column
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy import Text, Integer
+from sqlmodel import Field, SQLModel, Relationship, Column
+from sqlalchemy.dialects.postgresql import JSONB, ARRAY
+from sqlalchemy import Text
 from pgvector.sqlalchemy import Vector
 
-class Source(SQLModel, table=True):
+class RagBase(SQLModel):
+    pass
+
+class Source(RagBase, table=True):
     __tablename__ = "sources"
     __table_args__ = {"schema": "rag"}
-    source_id: UUID = Field(default_factory=uuid4, primary_key=True)
-    domain: str = Field(index=True, unique=True)
-    meta: dict = Field(default_factory=dict, sa_column=Column(JSONB))
 
-class Document(SQLModel, table=True):
+    source_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    domain: str = Field(unique=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    meta: Dict[str, Any] = Field(default={}, sa_column=Column(JSONB))
+
+    documents: List["Document"] = Relationship(back_populates="source")
+
+class Document(RagBase, table=True):
     __tablename__ = "documents"
     __table_args__ = {"schema": "rag"}
-    doc_id: UUID = Field(default_factory=uuid4, primary_key=True)
-    source_id: UUID = Field(foreign_key="rag.sources.source_id", index=True)
-    url: str
-    canonical_url: str = Field(index=True, unique=True)
-    url_hash: str = Field(index=True)
-    path_segments: list[str] = Field(sa_column=Column(ARRAY(Text())))
-    path_depth: int = Field(sa_column=Column(Integer))
-    title: str | None = None
-    page_type: str | None = Field(default=None, index=True)
-    language: str = Field(default="es")
-    fetched_at: datetime | None = Field(sa_column=Column(DateTime(timezone=True)))
-    status_code: int | None = None
-    content_len: int | None = None
-    content_hash: str
-    meta: dict = Field(
-        default_factory=dict,
-        sa_column=Column("metadata", JSONB)
-    )
 
-class Chunk(SQLModel, table=True):
+    doc_id: UUID = Field(default_factory=uuid4, primary_key=True)
+    source_id: UUID = Field(foreign_key="rag.sources.source_id")
+    url: str
+    canonical_url: str = Field(unique=True)
+    url_hash: str
+    path_segments: List[str] = Field(sa_column=Column(ARRAY(Text)))
+    path_depth: int
+    title: Optional[str] = None
+    page_type: Optional[str] = None
+    language: str = Field(default="es")
+    fetched_at: datetime = Field(default_factory=datetime.utcnow)
+    status_code: Optional[int] = None
+    content_len: Optional[int] = None
+    content_hash: str
+    meta: Dict[str, Any] = Field(default={}, sa_column=Column(JSONB))
+
+    source: Source = Relationship(back_populates="documents")
+    chunks: List["Chunk"] = Relationship(back_populates="document")
+
+class Chunk(RagBase, table=True):
     __tablename__ = "chunks"
     __table_args__ = {"schema": "rag"}
+
     chunk_id: UUID = Field(default_factory=uuid4, primary_key=True)
-    doc_id: UUID = Field(foreign_key="rag.documents.doc_id", index=True)
-    chunk_index: int = Field(index=True)
+    doc_id: UUID = Field(foreign_key="rag.documents.doc_id")
+    chunk_index: int
     start_char: int
     end_char: int
-    heading_path: list[str] = Field(sa_column=Column(ARRAY(Text())))
-    anchor: str | None = None
+    heading_path: List[str] = Field(sa_column=Column(ARRAY(Text)))
+    anchor: Optional[str] = None
     text: str
-    text_tokens: int | None = None
-    is_boilerplate: bool = Field(default=False, index=True)
+    text_tokens: Optional[int] = None
+    is_boilerplate: bool = Field(default=False)
     embedding_model: str
-    embedding_dim: int
-    embedding: list[float] = Field(sa_column=Column(Vector(dim=1536)))
-    meta: dict = Field(
-        default_factory=dict,
-        sa_column=Column("metadata", JSONB)
-    )
-    created_at: datetime | None = Field(
-        sa_column=Column(DateTime(timezone=True), server_default=func.now())
-    )
-    updated_at: datetime | None = Field(
-        sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-    )
+    embedding_dim: int = Field(default=1536)
+    embedding: List[float] = Field(sa_column=Column(Vector(1536)))
+    meta: Dict[str, Any] = Field(default={}, sa_column=Column(JSONB))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-class Contact(SQLModel, table=True):
-    __tablename__ = "contacts"
-    __table_args__ = {"schema": "rag"}
-    contact_id: UUID = Field(default_factory=uuid4, primary_key=True)
-    doc_id: UUID = Field(foreign_key="rag.documents.doc_id", index=True)
-    emails: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(Text())))
-    phones: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(Text())))
-    raw_section: str | None = None
-    meta: dict = Field(
-        default_factory=dict,
-        sa_column=Column("metadata", JSONB)
-    )
+    document: Document = Relationship(back_populates="chunks")
