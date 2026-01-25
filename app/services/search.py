@@ -65,12 +65,11 @@ PREGUNTA DEL USUARIO:
 RECORDÁ: El usuario YA ESTÁ en el sitio web med.unne.edu.ar. NO le digas que visite el sitio web. Respondé DIRECTAMENTE usando el formato estructurado con secciones y emojis."""
 
     response = await client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-5-mini",
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
-        ],
-        temperature=0.3
+        ]
     )
 
     return response.choices[0].message.content
@@ -178,9 +177,8 @@ RECORDÁ: El usuario YA ESTÁ en el sitio web med.unne.edu.ar. NO le digas que v
 
     try:
         stream = await client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-5-mini",
             messages=messages,
-            temperature=0.3,
             stream=True
         )
 
